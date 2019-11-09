@@ -47,6 +47,8 @@ contract Law {
     }
 
 // - Variables -
+    // members
+    Members members;
     // proposals
     uint proposal_count; // continuing ID
     Proposal[] proposals;
@@ -57,7 +59,9 @@ contract Law {
     uint default_duration;
 
 // - Constructor -
-    constructor (Members members) public {
+    constructor (address memberAddr) public {
+        members = Members(memberAddr);
+
         proposal_count = 0;
         law_count = 0;
         default_duration = 1;
@@ -67,6 +71,18 @@ contract Law {
 
 // - Private Functions -
 
+    function checkMember() private view {
+        require(members.checkMemberExist(msg.sender) >= 0, "You are not a member.");
+    }
+    function checkBoss() private view {
+        checkMember();
+        require(members.checkMemberIsBoss(msg.sender), "You are not a boss.");
+    }
+
+    function test() public {
+        members.emitMemberList();
+    }
+/*
 //    /// @param id: Proposal ID
     function checkProposalExist(uint id) private view returns (int) {
         int l = -1;
@@ -125,7 +141,8 @@ contract Law {
     /// @dev Consider adding different proposal actions
 //    /// @param n: Bill name
 //    /// @param d: Bill description
-    function createProposal(string memory n, string memory d) public onlyMember {
+    function createProposal(string memory n, string memory d) public {
+        checkMember();
         Proposal memory p;
         p.id = proposal_count;
         proposal_count++;
@@ -146,7 +163,8 @@ contract Law {
         emit ProposalCreated(p.creator, p.id);
     }
 //    /// @param id: Proposal ID to cancel
-    function cancelProposal(uint id) public onlyBoss {
+    function cancelProposal(uint id) public {
+        checkBoss();
         int l = checkProposalExist(id);
         require(l >= 0, "Given Proposal ID is invalid.");
         delete proposals[uint(l)];
@@ -156,7 +174,7 @@ contract Law {
 //    /// @param pass: the members vote (true, false)
     function vote(uint id, bool pass) public {
         address a = msg.sender;
-        int lm = checkMemberExist(a);
+        int lm = members.checkMemberExist(a);
         require(lm >= 0, "You are not a member");
         int lp = checkProposalExist(id);
         require(lp >= 0, "Given Proposal ID is invalid.");
@@ -168,7 +186,8 @@ contract Law {
     }
     /// @notice onlyBoss
 //    /// @param id: proposal id
-    function closeProposal(uint id) public onlyBoss {
+    function closeProposal(uint id) public {
+        checkBoss();
         int l = checkProposalExist(id);
         require(l >= 0, "Given Proposal ID is invalid.");
         // check if end time has been reached
@@ -215,7 +234,7 @@ contract Law {
         return uint(now);
     }
     function testBoss() public view returns (bool) {
-        if (msg.sender == bossman) return true;
+        if (msg.sender == members.bossman) return true;
         return false;
     }
 /*
@@ -229,7 +248,8 @@ contract Law {
 */
 
 // - Tools -
-    function kill() public onlyBoss {
+    function kill() public {
+        //checkBoss();
         selfdestruct(msg.sender);
     }
 }
