@@ -1,4 +1,5 @@
 
+var Basic = artifacts.require("./Basic.sol");
 var Members = artifacts.require("./Members.sol");
 var Law = artifacts.require("./Law.sol");
 
