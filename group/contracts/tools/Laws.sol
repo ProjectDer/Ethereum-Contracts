@@ -23,7 +23,7 @@ proposals
 
 */
 
-library Laws {
+contract Laws {
 // - Events -
     event VoteCast(
         address indexed _from,
@@ -34,14 +34,38 @@ library Laws {
         address indexed _from,
         uint indexed _id
     );
-    event LawModified(
+    event ChairAdded(
         address indexed _from,
         uint indexed _id
     );
-    event ProposalCreated(
+    event LawAdded(
         address indexed _from,
         uint indexed _id
     );
+    event LawRemoved(
+        address indexed _from,
+        uint indexed _id
+    );
+    event ProposalAdded(
+        address indexed _from,
+        uint indexed _id
+    );
+    event ProposalRemoved(
+        address indexed _from,
+        uint indexed _id
+    );
+// - Modifiers -
+    modifier onlyOffical()  {
+        bool o = false;
+        for (uint i = 0; i<chair_list.length; i++) {
+            if (chairs[chair_list[i]].chair == msg.sender) {
+                o = true;
+                i = chair_list.length;
+            }
+        }
+        require(o, "Admin required.");
+        _;
+    }
 // - Structures -
     struct Vote {
         address voter;
@@ -81,7 +105,22 @@ library Laws {
         Bill bill;
         uint enacted;
     }
-// - Modifiers -
+// - Variables -
+    // chairs
+    uint[] public chair_list;
+    mapping(uint => Chair) chairs;
+    // law
+    uint[] public law_list;
+    mapping(uint => Law) laws;
+    // proposals
+    uint[] public proposal_list;
+    mapping(uint => Proposal) proposals;
+    // other
+    uint default_duration; // hearing duration in minutes
+// - Constructor -
+    constructor () public {
+        default_duration = 20;
+    }
 // - Private Functions -
     function returnBasicProposal(uint id, uint t, bool act, uint dur) private view returns (Proposal memory) {
         Proposal memory p;
@@ -110,7 +149,7 @@ library Laws {
         require(checkVoteCast(voter_list, a), "Your vote has already been cast for this Proposal.");
         return pass;
     }
-    // chairs, laws, and proposals lists
+    // chair, law, and proposal lists
     /// @return int: -1: DNE, 0+: list index
     function checkExist(uint[] memory list, uint id) internal pure returns (int) {
         int l = -1;
@@ -133,7 +172,7 @@ library Laws {
         b.name = n;
         b.data = d;
         p.bill = b;
-        emit ProposalCreated(p.creator, id);
+        emit ProposalAdded(p.creator, id);
         return p;
     }
     function createProT0(uint id, // action: remove
@@ -141,7 +180,7 @@ library Laws {
         Proposal memory p = returnBasicProposal(id, 0, false, dur);
         // Law index to remove
         p.law_loc = loc;
-        emit ProposalCreated(p.creator, id);
+        emit ProposalAdded(p.creator, id);
         return p;
     }
     function createProT1(uint id, // action: add
@@ -150,7 +189,7 @@ library Laws {
         // Member address and elected Chair index
         p.member = m;
         p.chair_loc = c;
-        emit ProposalCreated(p.creator, id);
+        emit ProposalAdded(p.creator, id);
         return p;
     }
     function createProT1(uint id, // action :remove
@@ -158,7 +197,7 @@ library Laws {
         Proposal memory p = returnBasicProposal(id, 1, false, dur);
         // Chair index to remove
         p.chair_loc = c;
-        emit ProposalCreated(p.creator, id);
+        emit ProposalAdded(p.creator, id);
         return p;
     }
     // ----
@@ -180,6 +219,63 @@ library Laws {
             p.pass = true;
         }
         return p.pass;
+    }
+    //----------------------------------------------------------------------
+    // chair
+    function addChair(address a, string memory n) internal {
+        uint id = chair_list.length;
+        chair_list.push(id);
+        chairs[id] = Chair(a,n);
+    }
+    function removeChair(uint id) internal {
+        int l = checkExist(chair_list, id);
+        require(l != 0, "Removing the admin at ID:0 is not allowed.");
+        require(l > 0, "The given chair ID does not exist.");
+        address n;
+        require(chairs[chair_list[uint(l)]].chair == n,"The chair is not empty.");
+        delete chair_list[uint(l)];
+    }
+    function appointOffice(uint id, address a) internal {
+
+    }
+    function removeOffice(uint id) internal {
+
+    }
+    // laws
+    function addLaw(string memory n, string memory d) internal {
+        Bill memory b = Bill(msg.sender,n,d);
+        uint id = law_list.length;
+        laws[id] = Law(b,now);
+        law_list.push(id);
+    }
+    function removeLaw(uint id) internal {
+        int l = -1;
+        for (uint i = 0; i<law_list.length; i++) {
+            if (law_list[i] == id) {
+                l = int(i);
+                i = law_list.length;
+            }
+        }
+        require(l >= 0, "The given law ID does not exist.");
+        delete law_list[uint(l)];
+    }
+    // proposals
+    function addProposal(string memory n, string memory d) internal {
+        Bill memory b = Bill(msg.sender,n,d);
+        uint id = law_list.length;
+        laws[id] = Law(b,now);
+        law_list.push(id);
+    }
+    function removeProposal(uint id) internal {
+        int l = -1;
+        for (uint i = 0; i<law_list.length; i++) {
+            if (law_list[i] == id) {
+                l = int(i);
+                i = law_list.length;
+            }
+        }
+        require(l >= 0, "The given law ID does not exist.");
+        delete law_list[uint(l)];
     }
 // - Tools -
 // - Testing -
